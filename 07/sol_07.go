@@ -77,9 +77,8 @@ func main() {
         ints := parseInts(splits)
         if isValid(ints[0], ints[1], ints[2:]) {
             totValid += ints[0]
-        }
-        clear(seen)
-        if isValidConcat(ints[0], ints[1], ints[2:]) {
+            totValidConcat += ints[0]
+        } else if clear(seen); isValidConcat(ints[0], ints[1], ints[2:]) {
             totValidConcat += ints[0]
         }
     }
