@@ -31,6 +31,12 @@ func ReadInputLines() []string {
     for scanner.Scan() {
         lines = append(lines, strings.TrimSpace(scanner.Text()))
     }
+ 
+    if len(lines) == 0 {
+        log.Println("Empty input.")
+    } else if len(lines[len(lines)-1]) == 0 {
+        log.Println("Last line is blank.")
+    }
     return lines
 }
 
