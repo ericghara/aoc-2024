@@ -5,31 +5,15 @@ import (
     "strconv"
     "bufio"
     "regexp"
-    "os"
     "strings"
     "fmt"
+    "aoc/parseutil"
 )
 
 func main() {
-    fileName := "./input"
-    if len(os.Args) > 1 {
-        fileName = os.Args[1]
-    }
 
-    file, err := os.Open(fileName)
-    if err != nil {
-        log.Fatal("unable to open: ", fileName)
-    }
+    file := parseutil.OpenInput()
     defer file.Close()
-
-    parseInts := func(intStrs []string) []int64 {
-        ints := make([]int64, 0)
-        for _, str := range intStrs {
-            num, _ := strconv.ParseInt(str, 10, 64)
-            ints = append(ints, num)
-        }
-        return ints
-    }
 
     var isValid, isValidConcat func(int64, int64, []int64) bool
 
@@ -74,7 +58,7 @@ func main() {
         if (len(splits) < 2) {
             log.Fatal("Unable to parse line.")
         }
-        ints := parseInts(splits)
+        ints := parseutil.ParseInts(splits)
         if isValid(ints[0], ints[1], ints[2:]) {
             totValid += ints[0]
             totValidConcat += ints[0]
