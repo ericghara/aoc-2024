@@ -6,12 +6,11 @@ import (
 )
 
 func main() {
-    
     type Point [2]int
     lines := parseutil.ReadInputLines()
     
     board := make([][]int, 0)
-    score := make([][][]bool, 0)
+    score := make([][][]int, 0)
     topos := make([][]Point, 10)
 
     for r, l := range lines {
@@ -22,8 +21,7 @@ func main() {
             topos[elv] = append(topos[elv], Point{r,c})
         }
         board = append(board, row)
-        log.Println(row)
-        score = append(score, make([][]bool, len(row)))
+        score = append(score, make([][]int, len(row)))
     }
 
     findTrails := func() {
@@ -31,12 +29,12 @@ func main() {
 
         for r := range len(score) {
             for c := range len(score[r]) {
-                score[r][c] = make([]bool, len(topos[9]))
+                score[r][c] = make([]int, len(topos[9]))
             }
         }
 
         for id, p := range topos[9] {
-            score[p[0]][p[1]][id] = true
+            score[p[0]][p[1]][id] = 1
         }
 
         for elv := 8; elv >= 0; elv-- {
@@ -46,7 +44,7 @@ func main() {
                     if nR >= 0 && nR < len(board) && nC >= 0 && nC < len(board[nR]) && 
                         board[nR][nC] == elv+1 {
                         for id := range len(score[nR][nC]) {
-                            score[pt[0]][pt[1]][id] = score[pt[0]][pt[1]][id] || score[nR][nC][id]
+                            score[pt[0]][pt[1]][id] += score[nR][nC][id]
                         }
                     }
                 }
@@ -55,21 +53,18 @@ func main() {
     }
 
     findTrails()
-    numTrail := 0
-
-    log.Println()
-    for _, row := range score {
-        log.Println(row)
-    }
+    numTrailhead := 0
+    numDistinctTrail := 0
 
     for _, pt := range topos[0] {
         for _, reachable := range score[pt[0]][pt[1]] {
-            if reachable {
-                numTrail++
+            if reachable > 0 {
+                numTrailhead++
+                numDistinctTrail += reachable
             }
         }
     }
 
-    log.Println("Num Trails (pt1)", numTrail)
-
+    log.Println("Num Trails (pt1)", numTrailhead)
+    log.Println("Num Distinct Trail (pt2)", numDistinctTrail)
 }
