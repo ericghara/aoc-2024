@@ -1,75 +1,55 @@
 package main
 
 import (
-    "aoc/parseutil"
-    "log"
-    "regexp"
-    "strconv"
-    "math"
+	"aoc/parseutil"
+	"gonum.org/v1/gonum/mat"
+	"gonum.org/v1/gonum/optimize/convex/lp"
+	"log"
+	"math"
+	"regexp"
+	"strconv"
 )
-
-
-type Point [2]int
-
 
 func main() {
 
-    sections := parseutil.ReadInputSections(`^\s*$`)
-    matcher := regexp.MustCompile(`[^:]*:[^\d]*(\d+)[^\d]*(\d*)`)
-    costA, costB := 3, 1
+	type Point [2]float64
 
-    movesTo := func(dist, button Point) (int, bool) {
-        a,b := dist[0]%button[0], dist[1]%button[1]
-        if a != 0 || b != 0 {
-            return math.MaxInt64, false
-        }
-        return dist[0]/button[0], true
-    }
+	sections := parseutil.ReadInputSections(`^\s*$`)
+	matcher := regexp.MustCompile(`[^:]*:[^\d]*(\d+)[^\d]*(\d*)`)
 
+	c := []float64{3, 1}
+	offset := 10000000000000.0 // 0 for part 1
 
-    solve2 := func(target, a, b Point) int {
-        best := math.MaxInt64
-        needed := target
-        for bCost := 0; needed[0] >= 0 && needed[1] >= 0; bCost+=costB {
-            moves, ok := movesTo(needed, a)
-            if ok {
-                best = bCost + costA * moves
-                break
-            }
-            needed[0] -= b[0]
-            needed[1] -= b[1]
-        }
-        needed = target
-        for aCost := 0; needed[0] >= 0 && needed[1] >= 0; aCost += costA {
-            moves, ok := movesTo(needed, b)
-            if ok {
-                best = min(best, aCost + costB*moves)
-            } 
-            needed[0] -= a[0]
-            needed[1] -= a[1]
-        }
-        return best
-    }
+	almostEqual := func(a, b float64) bool {
+		epsilon := 0.1
+		return a - epsilon < b && a + epsilon > b
+	}
 
-    tot := 0
-    for _, lines := range sections {
-        var data [3]Point
-        for i, line := range lines {
-            m := matcher.FindAllStringSubmatch(line, -1)
-            data[i][0], _ = strconv.Atoi(m[0][1])
-            data[i][1], _ = strconv.Atoi(m[0][2])
-        }
-        // log.Println(data)
-        data[2][0]+= 10000000000000
-        data[2][1]+= 10000000000000
-        found := solve2(data[2], data[0], data[1])
-        if found < math.MaxInt64 {
-            log.Println(found)
-            tot += found
-        }   
-    }
+	tot := 0
+	for _, lines := range sections {
+		var data [3]Point
+		for i, line := range lines {
+			m := matcher.FindAllStringSubmatch(line, -1)
+			data[i][0], _ = strconv.ParseFloat(m[0][1], 64)
+			data[i][1], _ = strconv.ParseFloat(m[0][2], 64)
+		}
+		data[2][0] += offset
+		data[2][1] += offset
 
-    log.Println("part 1:", tot)
+		A := mat.NewDense(2, 2, []float64{data[0][0], data[1][0], data[0][1], data[1][1]})
+		b := []float64{data[2][0], data[2][1]}
+		opt, x, err := lp.Simplex(c, A, b, 0, nil)
+		if err != nil {
+			//log.Printf("Unfeasible")
+			continue
+		}
+		pressA, pressB := math.Round(x[0]), math.Round(x[1])
+		foundX := pressA*data[0][0] + pressB*data[1][0]
+		foundY := pressA*data[0][1] + pressB*data[1][1]
+		if almostEqual(data[2][0], foundX) && almostEqual(data[2][1], foundY) {
+			tot += int(math.Round(opt))
+		}
+	}
 
-
+	log.Println("Tot:", tot)
 }
