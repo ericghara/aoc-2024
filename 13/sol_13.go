@@ -8,29 +8,46 @@ import (
     "math"
 )
 
+
+type Point [2]int
+
+
 func main() {
-    type Point [2]int
 
     sections := parseutil.ReadInputSections(`^\s*$`)
     matcher := regexp.MustCompile(`[^:]*:[^\d]*(\d+)[^\d]*(\d*)`)
-    presses := 100
     costA, costB := 3, 1
 
-    solve1 := func(target, a, b Point) int {
-        curA := [2]int{0, 0}
-        best := math.MaxInt32
-        for aI := 0; aI <= presses; aI++ {
-           curB := curA
-            for bI := 0; bI <= presses; bI++ {
-                if curB == target {
-                    best = min(best, aI*costA+bI*costB)
-                }
-                curB[0] += b[0]
-                curB[1] += b[1]
+    movesTo := func(dist, button Point) (int, bool) {
+        a,b := dist[0]%button[0], dist[1]%button[1]
+        if a != 0 || b != 0 {
+            return math.MaxInt64, false
+        }
+        return dist[0]/button[0], true
+    }
+
+
+    solve2 := func(target, a, b Point) int {
+        best := math.MaxInt64
+        needed := target
+        for bCost := 0; needed[0] >= 0 && needed[1] >= 0; bCost+=costB {
+            moves, ok := movesTo(needed, a)
+            if ok {
+                best = bCost + costA * moves
+                break
             }
-            curA[0] += a[0]
-            curA[1] += a[1]
-        } 
+            needed[0] -= b[0]
+            needed[1] -= b[1]
+        }
+        needed = target
+        for aCost := 0; needed[0] >= 0 && needed[1] >= 0; aCost += costA {
+            moves, ok := movesTo(needed, b)
+            if ok {
+                best = min(best, aCost + costB*moves)
+            } 
+            needed[0] -= a[0]
+            needed[1] -= a[1]
+        }
         return best
     }
 
@@ -43,9 +60,11 @@ func main() {
             data[i][1], _ = strconv.Atoi(m[0][2])
         }
         // log.Println(data)
-        found := solve1(data[2], data[0], data[1])
-        if found < math.MaxInt32 {
-            // log.Println(found)
+        data[2][0]+= 10000000000000
+        data[2][1]+= 10000000000000
+        found := solve2(data[2], data[0], data[1])
+        if found < math.MaxInt64 {
+            log.Println(found)
             tot += found
         }   
     }
