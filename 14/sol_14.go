@@ -2,10 +2,12 @@ package main
 
 import (
     "aoc/parseutil"
+    "aoc/vis"
     "log"
     "regexp"
-    "fmt"
+    "image/color"
 )
+
 
 func main() {
 
@@ -57,7 +59,6 @@ func main() {
     quads := [4]int{}
     maxR, maxC := 103, 101
     ends := simulate(starts, speeds, 100, maxR, maxC)
-    log.Println(ends)
     for _, p := range ends {
         q, ok := getQuad(p, maxR, maxC)
         if ok {
@@ -65,20 +66,6 @@ func main() {
         }
     }
 
-    printGrid := func(points map[Point]bool) bool {
-        for r := range maxR {
-            for c := range maxC {
-                s := " "
-                if points[Point{r,c}] {
-                    s = "X"
-                }
-                fmt.Print(s)
-            }
-            fmt.Printf("\n")
-        } 
-        return true
-    }
-    
     var floodFill func(cur Point, seen, points map[Point]bool) int
 
     floodFill = func(cur Point, seen, points map[Point]bool) int {
@@ -95,7 +82,23 @@ func main() {
     }
 
     log.Println("Part 1", quads[0]*quads[1]*quads[2]*quads[3])
+
+
     ends = starts
+    tOffset := 6500
+    upscale := 3
+    ends = simulate(starts, speeds, tOffset, maxR, maxC)
+    colors := color.Palette{color.RGBA{250, 220, 171, 1}, color.RGBA{214,0,28,1}, color.RGBA{0,135,62,1}}
+    gw := vis.NewGifWriter(maxC*upscale, maxR*upscale, colors)
+
+    setPixelUpscale := func(point Point, colorI int) {
+        for x := point[1]*upscale; x < point[1]*upscale+upscale; x++ {
+            for y := point[0]*upscale; y < point[0]*upscale+upscale; y++ {
+                gw.SetPixel(x, y, colorI)
+            }
+        } 
+    }
+
     for i := range 10000 {
         seen, points := map[Point]bool{}, map[Point]bool{}
 
@@ -103,13 +106,37 @@ func main() {
             points[p] = true
         }
 
+        tree := []Point{}
+
         for p, _ := range points {
             if floodFill(p, seen, points) > 20 {
-                printGrid(points)
-                log.Println("Move:", i)
+                tree = append(tree, p)
             }
         }
-        printGrid(points)
+
+        if len(tree) > 0 {
+            gw.PushFrame(0, 1000)
+        } else {
+            clear(seen)
+            gw.PushFrame(0, 50)
+        }
+        for p, _ := range points {
+            setPixelUpscale(p, ((p[1]+p[0])&1)+1)
+        }
+        if len(tree) > 0 {
+            floodFill(tree[0], seen, points)
+            for p, _ := range seen {
+                setPixelUpscale(p, 2)
+            }
+            clear(seen);
+            floodFill(tree[1], seen, points)
+            for p, _ := range seen {
+                setPixelUpscale(p, 1)
+            }
+            log.Println("End at: ", i+tOffset, "seconds")
+            break
+        }
         ends = simulate(ends, speeds, 1, maxR, maxC)
     }
+    gw.Write("day_14.gif")
 }
