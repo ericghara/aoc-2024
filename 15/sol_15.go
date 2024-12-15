@@ -4,7 +4,8 @@ package main
 import (
     "log"
     "aoc/parseutil"
-    "fmt"
+    "slices"
+    "maps"
 )
 
 func main() {
@@ -13,44 +14,65 @@ func main() {
 
     moveDecoder := map[rune]Point{'v': {1,0}, '^': {-1,0}, '<': {0,-1}, '>': {0,1}}
     sections := parseutil.ReadInputSections(`^\s*$`)
-    var start Point
+    var cur Point
 
     board := [][]rune{}
     cmds := []Point{} 
 
-    printBoard := func() {
-        for _, row := range board {
-            for _, c := range row {
-                fmt.Print(string(c));
-            }
-            fmt.Println()
+    hMove := func(cur Point, dir int) Point {
+        next := Point{cur[0], cur[1]+dir}
+        endC := next[1]
+        row := board[next[0]]
+        for row[endC] != '#' && row[endC] != '.' {
+            endC += dir
         }
+        if row[endC] == '#' {
+            return cur
+        }
+        for r := endC; r != cur[1]; r-=dir {
+            row[r] = row[r-dir]
+        }
+        row[cur[1]] = '.'
+        board[cur[0]] = row
+        return next
     }
 
-    tryMove := func(cur, move Point) Point {
-        next := Point{cur[0]+move[0], cur[1]+move[1]}
-        if board[next[0]][next[1]] != '.' {
-            end := next
-            for board[end[0]][end[1]] == 'O' {
-                end[0] += move[0]
-                end[1] += move[1]
-            }
-            if board[end[0]][end[1]] == '#' {
-                return cur
-            }
-            board[next[0]][next[1]] = '.'
-            board[end[0]][end[1]] = 'O'
+    var vTest func(cur Point, dir int, seen map[Point]int, clock int) bool
+        
+    vTest = func(cur Point, dir int, seen map[Point]int, clock int) bool {
+        if seen[cur] > 0 || board[cur[0]][cur[1]] == '.' {
+            return true
+        } else if board[cur[0]][cur[1]] == '#' {
+            return false
         }
-        board[next[0]][next[1]] = '@'
-        board[cur[0]][cur[1]] = '.'
-        return next
+        seen[cur] = clock
+        clock++
+        res := true
+        if board[cur[0]][cur[1]] == '[' {
+            res = vTest(Point{cur[0], cur[1]+1}, dir, seen, clock)
+        } else if board[cur[0]][cur[1]] == ']'{
+             res = vTest(Point{cur[0], cur[1]-1}, dir, seen, clock)
+        }
+        return res && vTest(Point{cur[0]+dir, cur[1]}, dir, seen, clock+1)
+    }
+
+    vMove := func(seen map[Point]int, dir int) {
+        cmp := func(a,b Point) int {
+            return seen[b]-seen[a]
+        }
+        points := slices.Collect(maps.Keys(seen))
+        slices.SortFunc(points, cmp)
+        for _, p := range points {
+            board[p[0]+dir][p[1]] = board[p[0]][p[1]]
+            board[p[0]][p[1]] = '.'
+        }
     }
 
     score := func() int {
         var tot int
         for r, row := range board {
             for c, token := range row {
-                if token == 'O' {
+                if token == '[' || token == 'O'{
                     tot += r*100+c
                 }
             }
@@ -58,18 +80,56 @@ func main() {
         return tot
     }
 
-    for _, line := range sections[0] {
-        row := []rune{}
-        for _, token := range line {
-            if token == '@' {
-                start = Point{len(board), len(row)}
+    simulate := func() {
+        for _, move := range cmds {
+            if move[1] != 0 {
+                cur = hMove(cur, move[1])
+            } else if seen := map[Point]int{}; vTest(cur, move[0], seen, 1) {
+                vMove(seen, move[0])
+                cur[0] += move[0]
             }
-            row = append(row, token)
         }
-        board = append(board, row)
     }
 
-    for _, section := range sections[1:] {
+ 
+
+    part2 := func() {
+        board = [][]rune{}
+        for _, line := range sections[0] {
+            row := []rune{}
+            for _, token := range line {
+                stride := []rune{'.','.'}
+                if token == '@' {
+                    cur = Point{len(board), len(row)}
+                    stride[0] = '@'
+                } else if token == 'O' {
+                    stride = []rune{'[',']'}
+                } else if token == '#' {
+                    stride = []rune{'#','#'}
+                }
+                row = append(row, stride[0], stride[1])
+            }
+            board = append(board, row)
+        }
+        simulate()
+    }
+
+    part1 := func() {
+        board = [][]rune{}
+        for _, line := range sections[0] {
+            row := []rune{}
+            for _, token := range line {
+                if token == '@' {
+                    cur = Point{len(board), len(row)}
+                }
+                row = append(row, token)
+            }
+            board = append(board, row)
+        }
+        simulate()
+    }
+
+   for _, section := range sections[1:] {
         for _, line := range section {
             for _, token := range line {
                 cmds = append(cmds, moveDecoder[token])
@@ -77,15 +137,8 @@ func main() {
         }
     }
     
-    cur := start
-    for _, move := range cmds {
-        cur = tryMove(cur, move)
-    }
-
-
-
-    log.Println(start)
-    printBoard()
-    log.Println(cmds)
-    log.Println("part 1: ", score())
+    part1()
+    log.Println("part 1:", score())
+    part2()
+    log.Println("part 2:", score())
 }
