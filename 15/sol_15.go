@@ -68,19 +68,7 @@ func main() {
         }
     }
 
-    score := func() int {
-        var tot int
-        for r, row := range board {
-            for c, token := range row {
-                if token == '[' || token == 'O'{
-                    tot += r*100+c
-                }
-            }
-        }
-        return tot
-    }
-
-    simulate := func() {
+   simulate := func() {
         for _, move := range cmds {
             if move[1] != 0 {
                 cur = hMove(cur, move[1])
@@ -90,8 +78,6 @@ func main() {
             }
         }
     }
-
- 
 
     part2 := func() {
         board = [][]rune{}
@@ -129,6 +115,18 @@ func main() {
         simulate()
     }
 
+    score := func() int {
+        var tot int
+        for r, row := range board {
+            for c, token := range row {
+                if token == '[' || token == 'O'{
+                    tot += r*100+c
+                }
+            }
+        }
+        return tot
+    }
+ 
    for _, section := range sections[1:] {
         for _, line := range section {
             for _, token := range line {
