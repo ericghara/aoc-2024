@@ -6,6 +6,7 @@ import (
     "regexp"
     "strconv"
     "strings"
+    "slices"
 )
 
 var (
@@ -42,7 +43,6 @@ func bxc(noop int64) {
 func out(combo int64) {
     cVal := comboDecode(combo)
     outs = append(outs, cVal & 0b111)
-
 }
 
 func bdv(combo int64) {
@@ -55,7 +55,7 @@ func cdv(combo int64) {
 
 func xdv(inReg *int64, outReg *int64, combo int64) {
     shift := comboDecode(combo)
-    if shift > 63 {
+    if shift >= 63 {
         log.Println("overflow")
         *outReg = 0
     } else {
@@ -75,8 +75,6 @@ func comboDecode(combo int64) int64 {
     return -1
 }
 
-
-
 func main() {
     sects := parseutil.ReadInputSections(`^\s*$`)
     matcher := regexp.MustCompile(`[^:]*:\s((\d+,*)+)`)
@@ -89,31 +87,56 @@ func main() {
         regs[i] = n
     }
     ins = parseutil.ParseInts(strings.Split(matcher.FindAllStringSubmatch(sects[1][0], -1)[0][1], ","))
-    log.Println(regs)
-    log.Println(ins)
-    for insPtr < int64(len(ins)) {
-        opCode := ins[insPtr]
-        operand := ins[insPtr+1]
-        var operator func(int64)
-        switch opCode {
-        case 0: operator = adv
-        case 1: operator = bxl
-        case 2: operator = bst
-        case 3: operator = jnz
-        case 4: operator = bxc
-        case 5: operator = out
-        case 6: operator = bdv
-        case 7: operator = cdv
-        default: log.Panic("Unknown opcode", opCode)
+
+    execute := func() {
+        for insPtr >= 0 && insPtr < int64(len(ins)) {
+            opCode := ins[insPtr]
+            operand := ins[insPtr+1]
+            var operator func(int64)
+            switch opCode {
+            case 0: operator = adv
+            case 1: operator = bxl
+            case 2: operator = bst
+            case 3: operator = jnz
+            case 4: operator = bxc
+            case 5: operator = out
+            case 6: operator = bdv
+            case 7: operator = cdv
+            default: log.Panic("Unknown opcode", opCode)
+            }
+            operator(operand)
+            insPtr+=2
         }
-        operator(operand)
-        insPtr+=2
     }
+
+    crack := func() int64 {
+        q := []int64{0}
+        for tokI := len(ins)-1; tokI >= 0; tokI-- {
+            next := []int64{}
+            target := ins[tokI:]
+            for _, num := range q {
+                for i := range 8 {
+                    protoA := (num << 3) | int64(i)
+                    regs[0] = protoA
+                    outs = outs[:0]
+                    insPtr = 0
+                    execute()
+                    if slices.Equal(outs, target) {
+                        next = append(next, protoA)
+                    }
+                }
+            }
+            q = next
+        }
+        return slices.Min(q)
+    }
+    
+    execute()
     outStrs := []string{}
     for _, out := range outs {
         outStr := strconv.FormatInt(out, 10)
         outStrs = append(outStrs, outStr)
     }
-
-    log.Println(strings.Join(outStrs, ","))
+    log.Println("Part 1:", strings.Join(outStrs, ","))
+    log.Println("Part 2:", crack())
 }
