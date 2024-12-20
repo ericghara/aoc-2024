@@ -11,7 +11,7 @@ func main() {
     moves := [4]Point{{0,1},{0,-1},{1,0},{-1,0}}
 
     board := [][]int{}
-    var start, end Point
+    var start Point 
 
     for _, line := range parseutil.ReadInputLines() {
         row := make([]int, len(line))
@@ -21,15 +21,11 @@ func main() {
             case 'S': 
                 start = Point{len(board), c}
                 row[c] = math.MaxInt64
-            case 'E': 
-                end = Point{len(board), c}
-                row[c] = math.MaxInt64
             default:
                 row[c] = math.MaxInt64
             }
         }
         board = append(board, row)
-        //log.Println(row)
     }
 
     inBounds := func(p Point) bool {
@@ -57,37 +53,33 @@ func main() {
         }
     }
 
-    optimize := func(minSave int) int {
+    optimize := func(minSave,  cheatLen int) int {
         numSave := 0
 
         for r := range(len(board)) {
             for c := range(len(board[r])) {
-                if board[r][c] != -1 {
+                if board[r][c] == -1 {
                     continue
                 }
-                lo, hi := math.MaxInt64, math.MinInt64
-                for _, move := range moves {
-                    nMove := Point{move[0]+r, move[1]+c}
-                    if !inBounds(nMove) {
-                        continue
-                    }
-                    if val := board[nMove[0]][nMove[1]]; val >= 0 && val <= board[end[0]][end[1]] {
-                        lo = min(lo, val)
-                        hi = max(hi, val)
+                cheats := map[Point]bool{}
+                for dR := range cheatLen+1 {
+                    for dC := range cheatLen-dR+1 {
+                        newTime := dR + dC + board[r][c]
+                        for _, delta := range [4]Point{{dR, dC},{-dR, dC},{dR,-dC},{-dR, -dC}} {
+                            nMove := Point{r+delta[0], c+delta[1]}
+                            if inBounds(nMove) && board[nMove[0]][nMove[1]] >= newTime + minSave {
+                                cheats[nMove] = true
+                            }
+                        }
                     }
                 }
-                if savings := hi-lo-2; savings >= minSave {
-                    numSave++
-                    //log.Println(r, c)
-                }
+                numSave += len(cheats)
             }
-            log.Println(board[r])
         }
         return numSave
     }
 
     bfs()
-    log.Println(end, board[end[0]][end[1]])
-    log.Println(start, board[start[0]][start[1]])
-    log.Println("Part 1:", optimize(100))
+    log.Println("Part 1:", optimize(100, 2))
+    log.Println("Part 2:", optimize(100, 20))
 }
