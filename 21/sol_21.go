@@ -26,6 +26,10 @@ type DjState struct {
     Done bool
 }
 
+func (dj *DjState) Key() [3]int {
+   return [3]int{dj.Pos[0],dj.Pos[1], int(dj.Last)} 
+}
+
 func djComp(a,b interface{}) int {
     return a.(DjState).Cost - b.(DjState).Cost
 }
@@ -107,7 +111,7 @@ func main() {
             Last: 'A',
         }
         end := state.coords[sweep[1]]
-        costs := map[rune]int{sweep[0]: 0}
+        costs := map[[3]int]int{start.Key(): 0}
         q := bh.NewWith(djComp)
         q.Push(start)
         for cur, ok := q.Pop(); ok; cur, ok = q.Pop() {
@@ -129,14 +133,14 @@ func main() {
                 nPos := Point{move[0]+curState.Pos[0], move[1]+curState.Pos[1]}
                 if validMove(nPos, state.pad) {
                     nCost := curState.Cost + recurse(Sweep{curState.Last, button}, stateI+1)
-                    nRune := state.pad[nPos[0]][nPos[1]]
-                    if oldCost, ok := costs[nRune]; !ok || oldCost >= nCost {
-                        q.Push(DjState{
-                            Pos: nPos,
-                            Cost: nCost,
-                            Last: button,
-                        })
-                        costs[nRune] = nCost
+                    nState := DjState{
+                        Pos: nPos,
+                        Cost: nCost,
+                        Last: button,
+                    }
+                    if oldCost, ok := costs[nState.Key()]; !ok || oldCost > nCost {
+                        q.Push(nState)
+                        costs[nState.Key()] = nCost
                     }
                 }
             }
