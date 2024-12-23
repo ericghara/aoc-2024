@@ -5,14 +5,12 @@ import (
     "log"
     "strings"
     "sort"
-    "slices"
     "maps"
 )
 
 var (
     edgeToSet = map[string]map[string]bool{}
     edgeTo = map[string][]string{}
-    seen = map[string]bool{}
 )
 
 func main() {
@@ -35,15 +33,18 @@ func main() {
 
     part1 := func() int {
         seen := map[[3]string]bool{}
-        for n0, neighs := range edgeToSet {
+        for n0 := range maps.Keys(edgeToSet) {
             if !strings.HasPrefix(n0, "t") {
                 continue;
             }
-            nList := slices.Collect(maps.Keys(neighs))
-            for i := 0; i < len(nList); i++ {
-                n1 := nList[i]
-                for j := i+1; j < len(nList); j++ {
-                    n2 := nList[j] 
+            neighs := edgeTo[n0]
+            for i := 0; i < len(neighs); i++ {
+                n1 := neighs[i]
+                if n1 == n0 {
+                    continue
+                }
+                for j := i+1; j < len(neighs); j++ {
+                    n2 := neighs[j] 
                     if edgeToSet[n2][n1] {
                         key := [3]string{n1, n2, n0}
                         keySlice := key[:]
@@ -83,7 +84,6 @@ func main() {
     part2 := func() string {
         var b, e int
         for _, neighs := range edgeTo {
-            sort.Strings(neighs) // make returning results simpler
             e = max(len(neighs), e)
         }
 
@@ -103,6 +103,7 @@ func main() {
                 e = mid-1
             }
         }
+        sort.Strings(password)
         return strings.Join(password,",")
     }
 
