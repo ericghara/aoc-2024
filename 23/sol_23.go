@@ -10,91 +10,102 @@ import (
 )
 
 var (
-    edgeTo = map[string]map[string]bool{}
+    edgeToSet = map[string]map[string]bool{}
+    edgeTo = map[string][]string{}
     seen = map[string]bool{}
 )
-
-//func dfs(cur string) []string {
-//    if seen[cur] {
-//        return []string{}
-//    }
-//    seen[cur] = true
-//    found := []string{cur}
-//    for _, next := range edgeTo[cur] {
-//        log.Println(next)
-//       found = append(found, dfs(next)...)
-//    }
-//    return found
-//}
 
 func main() {
 
     for _, line := range parseutil.ReadInputLines() {
         split := strings.Split(line, "-")
-        if edgeTo[split[0]] == nil {
-            edgeTo[split[0]] = map[string]bool{}
+        if edgeToSet[split[0]] == nil {
+            edgeToSet[split[0]] = map[string]bool{}
+            edgeTo[split[0]] = []string{split[0]} // add self edge for p2
         }
-        if edgeTo[split[1]] == nil {
-            edgeTo[split[1]] = map[string]bool{}
+        if edgeToSet[split[1]] == nil {
+            edgeToSet[split[1]] = map[string]bool{}
+            edgeTo[split[1]] = []string{split[1]}
         }
-        edgeTo[split[0]][split[1]] = true
-        edgeTo[split[1]][split[0]] = true
+        edgeToSet[split[0]][split[1]] = true
+        edgeTo[split[0]] = append(edgeTo[split[0]], split[1])
+        edgeToSet[split[1]][split[0]] = true
+        edgeTo[split[1]] = append(edgeTo[split[1]], split[0])
     }
-//    log.Println(edgeTo)
 
-//    var part1 int
-//    for node, _ := range edgeTo {
-//        visited := dfs(node)
-//        if len(visited) >= 3 {
-//            for _, name := range visited {
-//                if strings.HasPrefix(name, "t") {
-//                    for i := 0; i < len(visited); i++ {
-//                        for j := i+1; j < len(visited); j++ {
-//                            for k := j+1; k < len(visited); k++ {
-//                                if strings.HasPrefix(visited[i], "t") || strings.HasPrefix(visited[j], "t") || strings.HasPrefix(visited[k], "t") {
-//                                    part1 ++
-//                                }
-//                            }
-//                        }
-//                    }
-//                    log.Println("broke")
-//                    break
-//                }
-//            }
-//        }
-//        log.Println(visited)
-//
-//    }
-
-    seen := map[[3]string]bool{}
-    for n0, neighs := range edgeTo {
-        if !strings.HasPrefix(n0, "t") {
-            continue;
-        }
-        nList := slices.Collect(maps.Keys(neighs))
-        for i := 0; i < len(nList); i++ {
-            n1 := nList[i]
-            for j := i+1; j < len(nList); j++ {
-                n2 := nList[j] 
-                if edgeTo[n2][n1] {
-                    key := [3]string{n1, n2, n0}
-                    keySlice := key[:]
-                    sort.Strings(keySlice)
-                    seen[key] = true
+    part1 := func() int {
+        seen := map[[3]string]bool{}
+        for n0, neighs := range edgeToSet {
+            if !strings.HasPrefix(n0, "t") {
+                continue;
+            }
+            nList := slices.Collect(maps.Keys(neighs))
+            for i := 0; i < len(nList); i++ {
+                n1 := nList[i]
+                for j := i+1; j < len(nList); j++ {
+                    n2 := nList[j] 
+                    if edgeToSet[n2][n1] {
+                        key := [3]string{n1, n2, n0}
+                        keySlice := key[:]
+                        sort.Strings(keySlice)
+                        seen[key] = true
+                    }
                 }
             }
-//            for _, n2 := range edgeTo[n1] {
-//                if n2 == node {
-//                    continue
-//                }
-//                key := [3]string{n1, n2, node}
-//                keySlice := key[:]
-//                sort.Strings(keySlice)
-//                seen[key] = true
-//            }
         }
+        return len(seen)
     }
 
-    log.Println(seen)
-    log.Println("Part 1", len(seen))
+    var canClique func(sI, aI int, selected, all []string) bool
+
+    canClique = func(sI, aI int, selected, all []string) bool {
+        if sI == len(selected) {
+            for i := 0; i < len(selected); i++ {
+                a := selected[i]
+                for j := i+1; j < len(selected); j++ {
+                    b := selected[j]
+                    if !edgeToSet[a][b] {
+                        return false
+                    }
+                }
+            }
+            return true
+        }
+        for nI := aI; nI <= len(all) - len(selected) + sI; nI++ {
+            selected[sI] = all[nI]
+            if canClique(sI+1, nI+1, selected, all) {
+                return true
+            }
+        }
+        return false
+    }
+
+    part2 := func() string {
+        var b, e int
+        for _, neighs := range edgeTo {
+            sort.Strings(neighs) // make returning results simpler
+            e = max(len(neighs), e)
+        }
+
+        password := []string{}
+        for b <= e {
+            mid := (e-b)/2+b
+            selected := make([]string, mid)
+            for _, neighs := range edgeTo {
+                if canClique(0, 0, selected, neighs) {
+                    password = selected
+                    break
+                }
+            }
+            if len(password) == mid  {
+                b = mid+1
+            } else {
+                e = mid-1
+            }
+        }
+        return strings.Join(password,",")
+    }
+
+    log.Println("Part 1", part1())
+    log.Println("Part 2", part2())
 }
