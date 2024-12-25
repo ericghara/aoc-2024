@@ -9,7 +9,6 @@ import (
     "fmt"
     "math/bits"
     "math"
-    "slices"
 )
 
 func and(g* Gate) {
@@ -212,6 +211,7 @@ func main() {
     }
     
     log.Println("Part 1", sum(x, y))
+    log.Println(numBits)
     bad := test(0xffffffffffffffff)
     log.Println("start", bad)
     log.Println("test", bits.OnesCount(bad))
